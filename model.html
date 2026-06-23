@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Просмотр</title>
+    <style>
+        body { 
+            margin:0; 
+            background:#fff; 
+            font-family:sans-serif; 
+        }
+
+        .back { 
+            display:block; 
+            padding:10px; 
+            color:#06f; 
+        }
+
+        #viewer { 
+            width:100%; 
+            height:80vh; 
+            background:#fff; 
+        }
+
+        .controls { 
+            display:flex; 
+            justify-content:space-between; 
+            padding:10px; 
+            background:#eee; 
+        }
+
+        .btn { 
+            padding:6px 14px; 
+            border-radius:30px; 
+            text-decoration:none; 
+            background:#06f; 
+            color:#fff; 
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back">Назад</a>
+    <div id="viewer"><div id="loading" style="text-align:center;padding:20px;">Загрузка...</div></div>
+    <div class="controls">
+        <span id="name">Модель</span>
+        <a href="#" id="download" download class="btn">Скачать</a>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script>
+        const idx = parseInt(new URLSearchParams(location.search).get('model')) || 1;
+        const names = ['Модель 1','Модель 2','Модель 3'];
+        const urls = ['models/model1.glb','models/model2.glb','models/model3.glb'];
+        const name = names[idx-1], url = urls[idx-1];
+        document.getElementById('name').textContent = name;
+        document.getElementById('download').href = url;
+
+        const container = document.getElementById('viewer');
+        const loading = document.getElementById('loading');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+
+        const camera = new THREE.PerspectiveCamera(40, container.clientWidth/container.clientHeight, 0.1, 100);
+        camera.position.set(3, 1.5, 5);
+
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 2;
+        controls.target.set(0, 0.5, 0);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dir = new THREE.DirectionalLight(0xffffff, 1);
+        dir.position.set(5, 8, 6);
+        scene.add(dir);
+
+        new THREE.GLTFLoader().load(url, (gltf) => {
+            loading.style.display = 'none';
+            const obj = gltf.scene;
+            const box = new THREE.Box3().setFromObject(obj);
+            const size = box.getSize(new THREE.Vector3());
+            const max = Math.max(size.x, size.y, size.z);
+            if (max > 3) { const s = 2.8/max; obj.scale.set(s,s,s); }
+            const center = box.getCenter(new THREE.Vector3());
+            obj.position.sub(center);
+            obj.position.y += 0.5;
+            scene.add(obj);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            const w = container.clientWidth, h = container.clientHeight;
+            camera.aspect = w/h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w,h);
+        });
+    </script>
+</body>
+</html>
